@@ -7,7 +7,7 @@ export MASTER_ADDR=localhost
 ulimit -n 65536
 
 epoch=3
-batch_size=16
+batch_size=32
 lr=5e-6
 train_emb=True
 train_img_proj=True
@@ -28,7 +28,9 @@ max_grad_norm=0.01
 seed=42
 use_location_token=False
 
-llama_model_path="/home/u2120220610/.cache/huggingface/hub/models--lmsys--vicuna-7b-v1.5/snapshots/3321f76e3f527bd14065daf69dad9344000a201d"
+#*************************To Do************************** Chang to your own path
+llama_model_path="lmsys/vicuna-7b-v1.5"
+#llama_model_path="/home/u2120220610/.cache/huggingface/hub/models--lmsys--vicuna-7b-v1.5/snapshots/3321f76e3f527bd14065daf69dad9344000a201d" 
 
 train_tag="scanrefer#scan2cap#scanqa#sqa3d#multi3dref#nr3d_caption#obj_align"
 val_tag="scanrefer#scan2cap#scanqa#sqa3d#multi3dref"
@@ -42,7 +44,7 @@ if [ $debug = "True" ]; then
     other_info="debug"
 else
     enable_wandb=False
-    gpu_num=1
+    gpu_num=4
     do_save=True
     other_info="chatscene"
 fi

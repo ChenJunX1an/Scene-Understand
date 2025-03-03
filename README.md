@@ -1,70 +1,7 @@
-# Chat-Scene
+# Scene Understand
 
-We build a multi-modal large language model for 3D scene understanding, excelling in tasks such as 3D grounding, captioning, and question answering.
+This repo benefits from [LLaMA-Factory](https://github.com/hiyouga/LLaMA-Factory/), [Chat-Scene](https://github.com/ZzZZCHS/Chat-Scene). Thanks for their wonderful works.
 
-<details>
-<summary> 🔥 Ranked 1st on the ScanRefer Benchmark (Sept. 2024) </summary>
-
-![alt text](assets/scanrefer_benchmark_results.png)
-[leaderboard link](https://kaldir.vc.in.tum.de/scanrefer_benchmark/benchmark_localization)
-</details>
-
-<details>
-<summary> 🔥 Ranked 1st on the Scan2Cap Benchmark (Sept. 2024) </summary>
-
-![alt text](assets/scan2cap_benchmark_results.png)
-[leaderboard link](https://kaldir.vc.in.tum.de/scanrefer_benchmark/benchmark_captioning)
-</details>
-
-
-## News
-
-**[2024.09]** 🔥 Chat-Scene has been accepted by NeurIPS 2024! [[paper](https://arxiv.org/abs/2312.08168)]
-
-**[2024.08]** 🔥 We release Chat-Scene, capable of processing both 3D point clouds and 2D multi-view images for improved 3D scene understanding, leading to significant advancements in grounding and captioning performance.
-
-**[2024.04]** We release a refined implementation (v2.1), which achieves better performance on grounding, captioning, and QA tasks. The code is available in branch [v2.1](https://github.com/ZzZZCHS/Chat-Scene/tree/v2.1).
-
-**[2023.12]** We release Chat-3D v2 [[paper](https://arxiv.org/abs/2312.08168v2)], introducing object identifiers for enhanced object referencing and grounding in 3D scenes. The original code is available in branch [v2.0](https://github.com/ZzZZCHS/Chat-Scene/tree/v2.0).
-
-**[2023.08]** We release Chat-3D [[paper](https://arxiv.org/abs/2308.08769)] [[code](https://github.com/Chat-3D/Chat-3D)], an LLM-based dialogue system for 3D scenes.
-
-## 🔥 Chat-Scene vs Chat-3D v2
-
-- Performance Comparison
-
-  |      	| [ScanRefer](https://github.com/daveredrum/ScanRefer) 	|         	| [Multi3dRefer](https://github.com/3dlg-hcvc/M3DRef-CLIP) 	|        	|  [Scan2Cap](https://github.com/daveredrum/Scan2Cap) 	|            	| [ScanQA](https://github.com/ATR-DBI/ScanQA) 	|        	| [SQA3D](https://github.com/SilongYong/SQA3D) 	|
-  | :----:	|:---------:	|:-------:	|:------:	|:------:	|:---------:	|:----------:	|:------------:	|:------:	|:-----:	|
-  |      	|  Acc@0.25 	| Acc@0.5 	|    F1@0.25   	| F1@0.5 	| CIDEr@0.5 	|   B-4@0.5 	|  CIDEr 	| B-4 	|   EM  	|
-  | v2.0 	|    35.9   	|   30.4  	|       -      	|    -   	|    28.1   	|    15.5    	|  77.1  	|   7.3  	|   -   	|
-  | v2.1 	|   42.5    	|  38.4   	|     45.1     	|  41.6  	|   63.9    	|    31.8    	|  87.6  	|  14.0  	| **54.7**  	|
-  | **Chat-Scene** | **55.5** | **50.2** | **57.1** | **52.4** | **77.1** | **36.3** | **87.7** | **14.3** | 54.6 |
-
-  <small>\*The v2.1 and Chat-Scene results are based on single models **without task-specific finetuning**.</small>
-
-- Main Changes
-  <details>
-  <summary> New features in Chat-Scene </summary>
-
-  - Introduce a 2D token for each object, with 2D representations extracted from multi-view images using [DINOv2](https://github.com/facebookresearch/dinov2).
-
-  - Enable processing of 2D video using a tracking-based detector when 3D input is unavailable.
-
-  </details>
-
-  <details>
-  <summary> New features in v2.1 (Chat-Scene is built upon v2.1) </summary>
-
-  - LLM backbone: Vicuna v0 -> [Vicuna v1.5](https://github.com/lm-sys/FastChat/blob/main/docs/vicuna_weights_version.md) + LoRA.
-
-  - Training scheme: three-stage training -> one-stage joint training.
-
-  - Detector: [PointGroup](https://github.com/dvlab-research/PointGroup) -> [Mask3D](https://github.com/JonasSchult/Mask3D).
-  
-  - Code Optimization:
-    - batch size: 1 -> 32.
-    - Simplified training and evaluation processes.
-  </details>
 
 ## 🔨 Preparation
 
