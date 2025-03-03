@@ -22,7 +22,9 @@ This repo benefits from [LLaMA-Factory](https://github.com/hiyouga/LLaMA-Factory
 
 - Annotations and extracted features:
   
-  Please follow the instructions in [preprocess](preprocess/).
+  - You can download all preprocessed data from [huggingface](https://huggingface.co/datasets/ChenJunxian/Chat-Scene/tree/main). Download them at main branch and unzip.
+
+  - Also you can follow the instructions in [preprocess](preprocess/) to download from google drive.
 
 
 ## 🤖 Training and Inference
@@ -66,27 +68,6 @@ This repo benefits from [LLaMA-Factory](https://github.com/hiyouga/LLaMA-Factory
   - Run: `bash scripts/run.sh`
   
 
-## 📄 Citation
-
-If you find this project useful in your research, please consider cite:
-```BibTeX
-@article{huang2024chat,
-  title={Chat-scene: Bridging 3d scene and large language models with object identifiers},
-  author={Huang, Haifeng and Chen, Yilun and Wang, Zehan and Huang, Rongjie and Xu, Runsen and Wang, Tai and Liu, Luping and Cheng, Xize and Zhao, Yang and Pang, Jiangmiao and others},
-  journal={Proceedings of the Advances in Neural Information Processing Systems, Vancouver, BC, Canada},
-  year={2024}
-}
-@article{wang2023chat,
-  title={Chat-3d: Data-efficiently tuning large language model for universal dialogue of 3d scenes},
-  author={Wang, Zehan and Huang, Haifeng and Zhao, Yang and Zhang, Ziang and Zhao, Zhou},
-  journal={arXiv preprint arXiv:2308.08769},
-  year={2023}
-}
-```
-
-Stay tuned for our project. 🔥
-
-If you have any questions or suggestions, feel free to drop us an email (`huanghaifeng@zju.edu.cn`, `wangzehan01@zju.edu.cn`) or open an issue.
 
 ## 😊 Acknowledgement
 
