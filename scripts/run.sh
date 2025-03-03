@@ -44,7 +44,7 @@ if [ $debug = "True" ]; then
     other_info="debug"
 else
     enable_wandb=False
-    gpu_num=4
+    gpu_num=8
     do_save=True
     other_info="chatscene"
 fi
