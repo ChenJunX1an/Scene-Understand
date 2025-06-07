@@ -13,7 +13,7 @@ from torch.utils.data import ConcatDataset
 from dataset import MetaLoader, create_dataset, create_loader, create_sampler
 from dataset.dataset_train import train_collate_fn
 from dataset.dataset_val import val_collate_fn
-from models.chat3d import Chat3D
+from models.qwenraw import Chat3D
 from tasks.shared_utils import get_media_types, setup_model
 from utils.basic_utils import (MetricLogger, SmoothedValue, setup_seed)
 from utils.config_utils import setup_main
@@ -99,7 +99,7 @@ def train(
 
     optimizer.zero_grad()
     iterator = metric_logger.log_every(train_loader, log_freq, header)
-    #val_metrics = evaluate_all(model, model_without_ddp, val_loaders, epoch, global_step, device, config)
+    val_metrics = evaluate_all(model, model_without_ddp, val_loaders, epoch, global_step, device, config)
     for i, (media_type, batch) in enumerate(iterator):
         for k in batch.keys():
             if type(batch[k]) == torch.Tensor:

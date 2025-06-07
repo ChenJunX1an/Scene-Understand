@@ -61,17 +61,10 @@ class Chat3D(nn.Module):
         for param in  self.custom_model.parameters():
             param.requires_grad = False
 
-        if hasattr(self.custom_model, 'lm_head'):
-            for param in self.custom_model.lm_head.parameters():
-                param.requires_grad = True
-                print(f"Unfroze parameter: {param.shape}")
-        else:
-            print("Warning: Model does not have 'lm_head' module")
         llama_model_path = config.model.llama_model_path
         self.low_resource = config.model.low_resource
         self.max_txt_len = config.model.max_txt_len
         self.end_sym = config.model.end_sym
-        self.end_sym = "<|im_end|>"
         self.system_path = config.model.system_path
         self.instruction_path = config.model.instruction_path
         self.role = config.model.role
@@ -94,6 +87,7 @@ class Chat3D(nn.Module):
 
         self.debug = config.debug
         self.llama_dim = self.custom_model.vision_output_dim
+
 
         if config.model.use_lora:
             def find_linear_layers(model, lora_target_modules):
@@ -119,8 +113,8 @@ class Chat3D(nn.Module):
             lora_target_modules = find_linear_layers(self.custom_model, config.lora.lora_target_modules)
 
             lora_config = LoraConfig(
-                r=config.lora.lora_r//2,
-                lora_alpha=config.lora.lora_alpha//2,
+                r=config.lora.lora_r,
+                lora_alpha=config.lora.lora_alpha,
                 target_modules=lora_target_modules,
                 lora_dropout=config.lora.lora_dropout,
                 bias="none",
@@ -134,13 +128,11 @@ class Chat3D(nn.Module):
             self.custom_model.model.model.embed_tokens.weight.requires_grad = True
             self.custom_model.model.model.embed_tokens.weight.data = self.custom_model.model.model.embed_tokens.weight.data.float()
             self.custom_model.print_trainable_parameters()
-            #self.custom_model.gradient_checkpointing_enable()
         else:
             self.custom_model.lm_head.weight.requires_grad = True
             self.custom_model.lm_head.weight.data = self.custom_model.lm_head.weight.data.float()
             self.custom_model.model.embed_tokens.weight.requires_grad = True
             self.custom_model.model.embed_tokens.weight.data = self.custom_model.model.embed_tokens.weight.data.float()
-
 
 
         self.object_proj = nn.Sequential(
@@ -160,17 +152,34 @@ class Chat3D(nn.Module):
         self.pos_proj = nn.Sequential(
             nn.Linear(self.pos_dim, self.llama_dim)
         )
-        self.objid_tokens = []
+        objid_tokens = []
         for i in range(self.max_obj_num):
-            self.objid_tokens.append(f"<OBJ{i:03}>")
+            objid_tokens.append(f"<OBJ{i:03}>")
         self.objid_start_idx = self.ori_vocab_size = len(self.processor.tokenizer)
         # print("objid_start_idx:",self.objid_start_idx)s
-        self.processor.tokenizer.add_tokens(self.objid_tokens, special_tokens=False)
+        self.processor.tokenizer.add_tokens(objid_tokens, special_tokens=True)
         self.objid_end_idx = len(self.processor.tokenizer)
         # print("objid_end_idx:",self.objid_end_idx)
         self.custom_model.resize_token_embeddings(len(self.processor.tokenizer))
 
-
+        # self.encoder_layer = nn.TransformerEncoderLayer(d_model=self.scene_dim, nhead=8, dim_feedforward=2048, dropout=0.05, norm_first=True, batch_first=True)
+        # self.relation_module = nn.TransformerEncoder(self.encoder_layer, num_layers=config.model.encoder_num_layers)
+        # self.scene_init_proj = nn.Sequential(
+        #     nn.Linear(self.input_dim, self.scene_dim)
+        # )
+        # self.scene_proj = nn.Sequential(
+        #     nn.Linear(self.scene_dim, self.llama_dim),
+        #     # nn.GELU(),
+        #     # nn.Linear(self.llama_dim, self.llama_dim)
+        # )
+        
+        # if not self.add_scene_token:
+        #     for p in self.relation_module.parameters():
+        #         p.requires_grad = False
+        #     for p in self.scene_init_proj.parameters():
+        #         p.requires_grad = False
+        #     for p in self.scene_proj.parameters():
+        #         p.requires_grad = False
                 
 
         with open(self.system_path, "r") as f:
@@ -209,15 +218,15 @@ class Chat3D(nn.Module):
 
     def get_object_list_embed(self, embed_obj, embed_img, embed_scene, scene_mask, obj_id, assigned_ids):
         valid_ids = torch.where(scene_mask)[0].tolist()
-        #print("valid_ids:",valid_ids)
-        if not self.config.model.use_lora:
+        # print("valid_ids:",valid_ids)
+        if  self.config.model.use_lora:
             objid_embeds = self.custom_model.model.model.embed_tokens.weight[self.objid_start_idx:self.objid_end_idx] # max_obj_num * 4096
         else:
             objid_embeds = self.custom_model.model.embed_tokens.weight[self.objid_start_idx:self.objid_end_idx]
 
 
         assigned_ids = assigned_ids[valid_ids]
-        #print("assigned_ids:",assigned_ids)
+        # print("assigned_ids:",assigned_ids)
         if not self.train_emb:
             objid_embeds = objid_embeds.detach()
         selected_objid_embeds = objid_embeds[valid_ids]
@@ -265,10 +274,10 @@ class Chat3D(nn.Module):
             object_list_embed[2::3, :] = embed_scene[assigned_ids]
             return object_list_embed
         if embed_img is not None and embed_scene is None:
-            object_list_embed = torch.zeros((selected_objid_embeds.shape[0], selected_objid_embeds.shape[1]), dtype=selected_objid_embeds.dtype, device=selected_objid_embeds.device)
-            #object_list_embed[0::2, :] = selected_objid_embeds
+            object_list_embed = torch.zeros((selected_objid_embeds.shape[0] * 2, selected_objid_embeds.shape[1]), dtype=selected_objid_embeds.dtype, device=selected_objid_embeds.device)
+            object_list_embed[0::2, :] = selected_objid_embeds
             # print("selected_objid_embeds:",selected_objid_embeds)
-            #object_list_embed[1::2, :] = embed_obj[assigned_ids]
+            object_list_embed[1::2, :] = embed_obj[assigned_ids]
             #object_list_embed[2::3, :] = embed_img[assigned_ids]
             return object_list_embed
         if embed_img is not None and embed_scene is not None:
@@ -303,7 +312,7 @@ class Chat3D(nn.Module):
         object_embed, object_img_embed = self.encode_object_feat(scene_feat, scene_img_feat, scene_locs)
         device = object_embed.device
         batch_size = object_embed.shape[0]
-        proj_object_embed = self.object_proj(object_embed) #BX100X3584
+        proj_object_embed = self.object_proj(object_embed)
         proj_object_img_embed = self.object_img_proj(object_img_embed)
         if self.add_pos_emb:
             mins, maxs = self.get_min_max_coord(scene_locs[:, :, :3], scene_mask)
@@ -345,26 +354,17 @@ class Chat3D(nn.Module):
         
 
         for i, question in enumerate(questions):
-            valid_ids = torch.where(scene_mask[i])[0].tolist()
-    
-            assigned_ids_new = assigned_ids[i][valid_ids]
-            id_str = ""
-            # for obj_id in self.objid_tokens:
-            #     id_str = id_str + obj_id + '<|vision_start|><|vision_pad|><|vision_end|>'
-            
-            # new_object_embed = self.get_object_list_embed(
-            #     proj_object_embed[i], 
-            #     proj_object_img_embed[i] if self.add_img_token else None, 
-            #     proj_scene_embed[i] if self.add_scene_token else None, 
-            #     scene_mask[i],
-            #     obj_ids[i],
-            #     assigned_ids[i]
-            # )
-            new_object_embed = torch.zeros((proj_object_embed.shape[1], proj_object_embed.shape[2]), dtype=proj_object_embed.dtype, device=proj_object_embed.device)
-            for k,assigned_id in enumerate(assigned_ids_new):
-                new_object_embed[k,:] = proj_object_embed[i][assigned_id]
-                id_str = id_str + self.objid_tokens[assigned_id] + '<|vision_start|><|vision_pad|><|vision_end|>'
-            # print("proj_object_embed:",proj_object_embed.size())
+
+
+            new_object_embed = self.get_object_list_embed(
+                proj_object_embed[i], 
+                proj_object_img_embed[i] if self.add_img_token else None, 
+                proj_scene_embed[i] if self.add_scene_token else None, 
+                scene_mask[i],
+                obj_ids[i],
+                assigned_ids[i]
+            )
+            #print("proj_object_embed:",proj_object_embed.size())
             if proj_object_embed_list is None:
                 proj_object_embed_list = new_object_embed.unsqueeze(0)
             else:
@@ -384,7 +384,7 @@ class Chat3D(nn.Module):
             
             # 构造 message 列表
             message = [
-                {"role": "system", "content": self.system + " " + self.instruction + id_str},
+                {"role": "system", "content": self.system + " " + self.instruction},
                 {
                     "role": "user",
                     "content": content
@@ -395,36 +395,26 @@ class Chat3D(nn.Module):
             #print("messages:",messages)
 
             answer = [
-                {"role": "assistant", "content": answers[i] + self.end_sym}
+                {"role": "assistant", "content": answers[i]}
             ]
             # answerlist.append(answer)
-            #print("answer:",answer)
-            #prompt_answer = self.processor.apply_chat_template(answer, tokenize=False, add_generation_prompt=False)
-            # # 获取<im_start>的token_id
-            # im_start_id = self.processor.tokenizer.convert_tokens_to_ids(["<|im_start|>"])[0]
-            # #print('im_start_id:',im_start_id)
-            # im_start_positions = (input_ids[0] == im_start_id).nonzero(as_tuple=True)[0]
-            '''
-            prompt_answer = answers[i] + self.end_sym
+            prompt_answer = self.processor.apply_chat_template(answer, tokenize=False, add_generation_prompt=False)
             answer_token = self.processor(text=[prompt_answer])
             answer_id = torch.tensor(answer_token['input_ids']).to(device)
-            #print("answer_id:",answer_id)
             answerlist.append(answer_id)
-            '''
+
         #4.23
-        '''
+        
         instruction_text = [{"role": "system", "content": self.system + " " + self.instruction}]
         instruction_text = self.processor.apply_chat_template(instruction_text, tokenize=False, add_generation_prompt=False)
-        #print("instruction_text:",instruction_text)
         instruction_tokens = self.processor(text=[instruction_text])
-        instruction_end_pos = len(instruction_tokens) - 1
-        '''
+        instruction_end_pos = len(instruction_tokens)
         #print("instruction_end_pos",instruction_end_pos)
         #4.23
         #add in 4.22
         image_inputs, video_inputs = process_vision_info(messages)
         texts = [
-        self.processor.apply_chat_template(msg, tokenize=False, add_generation_prompt=False)
+        self.processor.apply_chat_template(msg, tokenize=False, add_generation_prompt=True)
         for msg in messages
         ]
         #print("texts:",texts)
@@ -441,31 +431,17 @@ class Chat3D(nn.Module):
         pixel_values = inputs.get('pixel_values')
         image_grid_thw = inputs.get('image_grid_thw')
         attention_mask = inputs.get('attention_mask')
-        im_start_id = self.processor.tokenizer.convert_tokens_to_ids(["<|im_start|>"])[0]
-        batch_size = input_ids.size(0)
-        labels = torch.full_like(input_ids, -100)  # 初始化为-100（忽略位置）
-        third_position_list =[]
-        for i in range(batch_size):
-            # 查找第三个<im_start>的位置
-            positions = (input_ids[i] == im_start_id).nonzero(as_tuple=True)[0]
-            if len(positions) >= 3:
-                third_position = positions[-1].item()+3
-                third_position_list.append(third_position)
-                # 从第三个<im_start>开始到序列结束的token作为labels
-                labels[i, third_position:] = input_ids[i, third_position:]
-        targets = labels.to(device)
-        '''
+        
         pos_3d_mask = torch.ones((batch_size, 200), dtype=torch.long, device=device)
         new_attention_mask = torch.cat([
             attention_mask[:, :instruction_end_pos],
             pos_3d_mask,
             attention_mask[:, instruction_end_pos:],
         ], dim=1)
-        '''
-        '''
+
         target_list = None
         for answer_id in answerlist:
-            padding_length = input_ids.size(1)  - answer_id.size(1) #+ 200
+            padding_length = input_ids.size(1)  - answer_id.size(1) + 200
 
             # 生成填充张量
             # 形状为 (batch_size, padding_length)，值全为 -100
@@ -481,7 +457,7 @@ class Chat3D(nn.Module):
             #target_list.append(torch.squeeze(target_id))
         targets = target_list.to(device)
         #add in 4.22
-        '''
+
 
 
 
@@ -493,44 +469,15 @@ class Chat3D(nn.Module):
                 attention_mask=attention_mask,
                 pixel_values=pixel_values,
                 image_grid_thw=image_grid_thw,
-                position_3d_features=proj_object_embed_list,
-                labels=targets, # Standard for Causal LM loss
+                position_3d_features=None,
+                labels=input_ids, # Standard for Causal LM loss
                 return_dict=True,
-                #instruction_end_pos = instruction_end_pos,
-                train_emb=self.train_emb,
-                ori_vocab_size = self.ori_vocab_size
+                instruction_end_pos = instruction_end_pos,
+                train_emb=None,
+                ori_vocab_size = None
             )
-        '''
-        logits= outputs.logits
-
-        # print("logits:",logits.size())
-        # print("self.objid_end_idx:",self.objid_end_idx)
-        probs = torch.softmax(logits, dim=-1)
-
-        predicted_token_ids = torch.argmax(probs, dim=-1)
-        # print("predicted_token_ids:",predicted_token_ids.size())
-        # print("answer_id.size(1):",answer_id.size(1))
-        #predicted_token_ids = [predicted_token_id[-(answer_id.size(1)+1):] for predicted_token_id in predicted_token_ids]
-        # predicted_token_id_pre = [predicted_token_id[:-(answer_id.size(1)+1)] for predicted_token_id in predicted_token_ids]
-        # print("predicted_token_ids_pre:",predicted_token_id_pre)
-        # predict=self.processor.batch_decode(
-        #         predicted_token_id_pre, skip_special_tokens=False, clean_up_tokenization_spaces=False
-        #     )
-        # print("train_predict_pre:",predict)
-        predicted_token_back = [predicted_token_id[third_position-1:] for predicted_token_id,third_position in zip(predicted_token_ids,third_position_list)]
-        print("predicted_token_ids:",predicted_token_back)
-        predict=self.processor.batch_decode(
-                predicted_token_back, skip_special_tokens=False, clean_up_tokenization_spaces=False
-            )
-        print("train_predict:",predict)
-        target = [predicted_token_id[third_position:] for predicted_token_id,third_position in zip(targets,third_position_list)]
-        target_text = self.processor.batch_decode(
-                target, skip_special_tokens=False, clean_up_tokenization_spaces=False
-            )
-        print("target_token_ids:",target)
-        print("target_text:",target_text)
-        #print("gt_answers:",answers)
-        '''
+            
+            
         return dict(
             loss=outputs.loss,
             obj_norm=proj_object_embed.norm(dim=-1).mean().detach().cpu(),
@@ -573,25 +520,14 @@ class Chat3D(nn.Module):
 
 
 
-            valid_ids = torch.where(scene_mask[i])[0].tolist()
-    
-            assigned_ids_new = assigned_ids[i][valid_ids]
-            id_str = ""
-            # for obj_id in self.objid_tokens:
-            #     id_str = id_str + obj_id + '<|vision_start|><|vision_pad|><|vision_end|>'
-            #print('id_str:',id_str)
-            # new_object_embed = self.get_object_list_embed(
-            #     proj_object_embed[i], 
-            #     proj_object_img_embed[i] if self.add_img_token else None, 
-            #     proj_scene_embed[i] if self.add_scene_token else None, 
-            #     scene_mask[i],
-            #     obj_ids[i],
-            #     assigned_ids[i]
-            # )
-            new_object_embed = torch.zeros((proj_object_embed.shape[1], proj_object_embed.shape[2]), dtype=proj_object_embed.dtype, device=proj_object_embed.device)
-            for k,assigned_id in enumerate(assigned_ids_new):
-                new_object_embed[k,:] = proj_object_embed[i][assigned_id]
-                id_str = id_str + self.objid_tokens[assigned_id] + '<|vision_start|><|vision_pad|><|vision_end|>'
+            new_object_embed = self.get_object_list_embed(
+                proj_object_embed[i], 
+                proj_object_img_embed[i] if self.add_img_token else None, 
+                proj_scene_embed[i] if self.add_scene_token else None, 
+                scene_mask[i],
+                obj_ids[i],
+                assigned_ids[i]
+            )
             # print("proj_object_embed:",proj_object_embed.size())
             proj_object_embed_list = new_object_embed.unsqueeze(0)
             # if proj_object_embed_list is None:
@@ -616,7 +552,7 @@ class Chat3D(nn.Module):
             
             # 构造 message 列表
             message = [
-                {"role": "system", "content": self.system + " " + self.instruction + id_str},
+                {"role": "system", "content": self.system + " " + self.instruction},
                 {
                     "role": "user",
                     "content": content
@@ -640,8 +576,6 @@ class Chat3D(nn.Module):
             pixel_values = inputs.get('pixel_values')
             image_grid_thw = inputs.get('image_grid_thw')
             attention_mask = inputs.get('attention_mask')
-            
-            '''
             instruction_text = [{"role": "system", "content": self.system + " " + self.instruction}]
             instruction_text = self.processor.apply_chat_template(instruction_text, tokenize=False, add_generation_prompt=False)
             instruction_tokens = self.processor(text=[instruction_text])
@@ -652,7 +586,6 @@ class Chat3D(nn.Module):
                 pos_3d_mask,
                 attention_mask[:, instruction_end_pos:],
             ], dim=1)
-            '''
 
             
             
@@ -663,33 +596,33 @@ class Chat3D(nn.Module):
                 attention_mask=attention_mask,
                 pixel_values=pixel_values,
                 image_grid_thw=image_grid_thw,
-                position_3d_features=proj_object_embed_list,
+                position_3d_features=None,
                 #labels=targets, # Standard for Causal LM loss
                 #return_dict=False,
-                #instruction_end_pos = instruction_end_pos
+                instruction_end_pos = instruction_end_pos
             )
             # print("outputs:",outputs.size())
             #output_token = outputs[0]
             # for in_ids, out_ids in zip(input_ids, outputs):
             #     print("in_ids:",in_ids.size())
             #     print("out_ids:",out_ids.size())
-            generated_ids_trimmed = [
-                out_ids[len(in_ids) :] for in_ids, out_ids in zip(input_ids, outputs)
-            ]
             # generated_ids_trimmed = [
-            #     out_ids for in_ids, out_ids in zip(input_ids, outputs)
+            #     out_ids[len(in_ids) :] for in_ids, out_ids in zip(input_ids, outputs)
             # ]
+            generated_ids_trimmed = [
+                out_ids for in_ids, out_ids in zip(input_ids, outputs)
+            ]
             output_text = self.processor.batch_decode(
                 generated_ids_trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False
             )
             #output_text = self.processor.batch_decode(outputs)
             #print("output_text:",output_text)
             for out_text in output_text:
-                print("output_text:",out_text)
+                #print("output_text:",out_text)
                 out_text = out_text.split(self.end_sym)[0]
                 out_text = out_text.replace('  ', ' ').replace(' .', '.').strip()
                 out_text = recover_caption(out_text, assigned_ids[i].tolist())
-                #print("final_output_text:",out_text)
+                print("final_output_text:",out_text)
                 output_texts.append(out_text)
         return output_texts
 

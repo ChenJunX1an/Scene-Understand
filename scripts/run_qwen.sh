@@ -1,7 +1,7 @@
 which_python=$(which python)
 export PYTHONPATH=${PYTHONPATH}:${which_python}:.
 echo "PYTHONPATH: ${PYTHONPATH}"
-
+export CUDA_VISIBLE_DEVICES=1
 export MASTER_PORT=$((54000 + $RANDOM % 10000))
 export MASTER_ADDR=localhost
 ulimit -n 65536
@@ -53,7 +53,7 @@ tag="${train_tag}__${val_tag}__${other_info}"
 
 pretrained_path=""
 
-OUTPUT_DIR=outputs/"$(date +"%Y%m%d_%H%M%S")"_lr"$lr"_ep"$epoch"_"$tag"
+OUTPUT_DIR=outputs/qwenraw/"$(date +"%Y%m%d_%H%M%S")"_lr"$lr"_ep"$epoch"_"$tag"
 mkdir -p ${OUTPUT_DIR}
 
 #srun --partition=mozi-S1 --gres=gpu:${gpu_num} --ntasks-per-node=${gpu_num} --kill-on-bad-exit --quotatype=reserved \
@@ -68,7 +68,7 @@ mkdir -p ${OUTPUT_DIR}
 torchrun  --nnodes=1 --nproc_per_node=${gpu_num} \
           --rdzv_endpoint=${MASTER_ADDR}:${MASTER_PORT} \
           --rdzv_backend=c10d \
-          tasks/train.py \
+          tasks/train_qwen.py \
     "$(dirname $0)/${config}config.py" \
     output_dir "$OUTPUT_DIR" \
     scheduler.epochs "$epoch" \

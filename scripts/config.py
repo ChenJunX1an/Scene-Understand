@@ -257,10 +257,10 @@ lora = dict(
       "q_proj",
       "v_proj",
       "k_proj",
-      "o_proj",
-      "gate_proj",
-      "up_proj",
-      "down_proj"
+      "o_proj"#,
+    #   "gate_proj",
+    #   "up_proj",
+    #   "down_proj"
     ],
     lora_r=64,
     lora_alpha=16,
@@ -289,8 +289,8 @@ evaluate = False
 
 # ========================= wandb ==========================
 wandb = dict(
-    enable=False,
-    entity="huanghaifeng",  # username or team name to store the runs, see https://docs.wandb.ai/ref/python/init
+    enable=True,
+    entity="chenjunxian-nankai-university",  # username or team name to store the runs, see https://docs.wandb.ai/ref/python/init
     project="Scene-LLM",
 )
 dist_url = "env://"

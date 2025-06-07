@@ -10,7 +10,7 @@ import glob
 import random
 from prompts.prompts import obj_caption_wid_prompt
 from torch.nn.utils.rnn import pad_sequence
-
+import re
 logger = logging.getLogger(__name__)
 
 
@@ -69,11 +69,30 @@ class ValDataset(BaseDataset):
             prompt = self.anno[index]["prompt"]
         ref_captions = self.anno[index]["ref_captions"].copy() if "ref_captions" in self.anno[index] else []
         qid = self.anno[index]["qid"] if "qid" in self.anno[index] else 0
-        return scene_feat, scene_img_feat, scene_mask, scene_locs, obj_id, assigned_ids, prompt, ref_captions, scene_id, qid, pred_id, type_info
+
+        image_dir = os.path.join('data', 'images_2D','2D_image_mark_mask3d_output_val_64imgs', str(scene_id)[:-2] + '00')
+        image_paths = glob.glob(os.path.join(image_dir, '*.jpg'))
+        def extract_number(path):
+            filename = os.path.basename(path)
+            number = re.findall(r'\d+', filename)[0]
+            return int(number)
+
+
+        sorted_image_paths = sorted(image_paths, key=extract_number)
+        #均匀采样一半数量的图片路径
+        num_images = len(sorted_image_paths)
+        # print("dataset_train_images:",num_images)
+        if num_images > 0:
+            step = 8 if num_images % 8 == 0 else 1
+            sampled_image_paths = sorted_image_paths[::step]
+        else:
+            sampled_image_paths = []
+
+        return sampled_image_paths,scene_feat, scene_img_feat, scene_mask, scene_locs, obj_id, assigned_ids, prompt, ref_captions, scene_id, qid, pred_id, type_info
 
 
 def val_collate_fn(batch):
-    scene_feats, scene_img_feats, scene_masks, scene_locs, obj_ids, assigned_ids, prompts, ref_captions, scene_ids, qids, pred_ids, type_infos = zip(*batch)
+    image_paths,scene_feats, scene_img_feats, scene_masks, scene_locs, obj_ids, assigned_ids, prompts, ref_captions, scene_ids, qids, pred_ids, type_infos = zip(*batch)
     batch_scene_feat = pad_sequence(scene_feats, batch_first=True)
     batch_scene_img_feat = pad_sequence(scene_img_feats, batch_first=True)
     batch_scene_mask = pad_sequence(scene_masks, batch_first=True).to(torch.bool)
@@ -82,6 +101,7 @@ def val_collate_fn(batch):
     obj_ids = torch.tensor(obj_ids)
     pred_ids = torch.tensor(pred_ids)
     return {
+        "image_paths": image_paths,
         "scene_feat": batch_scene_feat,
         "scene_img_feat": batch_scene_img_feat,
         "scene_locs": batch_scene_locs,
