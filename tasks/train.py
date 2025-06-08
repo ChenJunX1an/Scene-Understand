@@ -95,7 +95,7 @@ def train(
     train_loader = MetaLoader(name2loader=dict(list(zip(media_types, train_loaders))))
 
     accum_iter = 1
-    eval_freq = 50000  # len(train_loader)
+    eval_freq = len(train_loader)
 
     optimizer.zero_grad()
     iterator = metric_logger.log_every(train_loader, log_freq, header)
