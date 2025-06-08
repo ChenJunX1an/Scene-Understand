@@ -224,7 +224,8 @@ batch_size = 32
 
 # ========================= model ==========================
 model = dict(
-    llama_model_path="llm/vicuna-7b-v1.5",
+    # llama_model_path="llm/vicuna-7b-v1.5",
+    qwen_model_path="llm/vicuna-7b-v1.5",
     input_dim=1024,
     img_input_dim=1024,
     attr_dim=512,
@@ -257,10 +258,10 @@ lora = dict(
       "q_proj",
       "v_proj",
       "k_proj",
-      "o_proj"#,
-    #   "gate_proj",
-    #   "up_proj",
-    #   "down_proj"
+      "o_proj",
+      "gate_proj",
+      "up_proj",
+      "down_proj"
     ],
     lora_r=64,
     lora_alpha=16,
@@ -312,3 +313,6 @@ img_projector_path = ""
 
 debug=False
 gpu_num=1
+
+resolution = 256
+frame_num = 8

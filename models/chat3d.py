@@ -50,13 +50,13 @@ class Chat3D(nn.Module):
         self.config = config
 
 
-        model_name_or_path = "/home/u2120220610/Chat-Scene-dev/Qwen2.5-VL-7B-Instruct"  # 替换为实际的预训练模型路径
+        model_name_or_path = config.model.qwen_model_path #"/home/u2120220610/Chat-Scene-dev/Qwen2.5-VL-7B-Instruct"  # 替换为实际的预训练模型路径
         self.custom_model = qwen3d.from_pretrained(model_name_or_path,
                                                    torch_dtype=torch.bfloat16#,
                                                    #attn_implementation="flash_attention_2"
                                                    )
-        self.processor = AutoProcessor.from_pretrained("/home/u2120220610/Chat-Scene-dev/Qwen2.5-VL-7B-Instruct")
-
+        self.processor = AutoProcessor.from_pretrained(model_name_or_path)
+        self.resolution = config.resolution
 
         for param in  self.custom_model.parameters():
             param.requires_grad = False
@@ -67,7 +67,7 @@ class Chat3D(nn.Module):
                 print(f"Unfroze parameter: {param.shape}")
         else:
             print("Warning: Model does not have 'lm_head' module")
-        llama_model_path = config.model.llama_model_path
+        #llama_model_path = config.model.llama_model_path
         self.low_resource = config.model.low_resource
         self.max_txt_len = config.model.max_txt_len
         self.end_sym = config.model.end_sym
@@ -377,7 +377,7 @@ class Chat3D(nn.Module):
 
             # 循环添加图像项
             for current_image_path in current_image_paths:
-                content.append({"type": "image","image":current_image_path,"resized_height": 256, "resized_width": 256})
+                content.append({"type": "image","image":current_image_path,"resized_height": self.resolution, "resized_width": self.resolution})
 
             # 添加文本项
             content.append({"type": "text", "text": question_text})
@@ -609,7 +609,7 @@ class Chat3D(nn.Module):
 
             # 循环添加图像项
             for current_image_path in current_image_paths:
-                content.append({"type": "image","image":current_image_path,"resized_height": 256, "resized_width": 256})
+                content.append({"type": "image","image":current_image_path,"resized_height": self.resolution, "resized_width": self.resolution})
 
             # 添加文本项
             content.append({"type": "text", "text": question_text})

@@ -29,8 +29,11 @@ seed=42
 use_location_token=False
 
 #*************************To Do************************** Chang to your own path
-llama_model_path="lmsys/vicuna-7b-v1.5"
-llama_model_path="/home/u2120220610/.cache/huggingface/hub/models--lmsys--vicuna-7b-v1.5/snapshots/3321f76e3f527bd14065daf69dad9344000a201d" 
+# llama_model_path="lmsys/vicuna-7b-v1.5"
+# llama_model_path="/home/u2120220610/.cache/huggingface/hub/models--lmsys--vicuna-7b-v1.5/snapshots/3321f76e3f527bd14065daf69dad9344000a201d" 
+qwen_model_path="/home/u2120220610/Chat-Scene-dev/Qwen2.5-VL-7B-Instruct"
+resolution=256
+frame_num=8
 
 train_tag="scanrefer#scan2cap#scanqa#sqa3d#multi3dref#nr3d_caption#obj_align"
 val_tag="scanrefer#scan2cap#scanqa#sqa3d#multi3dref"
@@ -99,6 +102,8 @@ torchrun  --nnodes=1 --nproc_per_node=${gpu_num} \
     optimizer.max_grad_norm "$max_grad_norm" \
     seed "$seed" \
     model.fuse_with_id "$fuse_with_id" \
-    model.llama_model_path "$llama_model_path" \
-    model.use_location_token "$use_location_token"
+    model.qwen_model_path "$qwen_model_path" \
+    model.use_location_token "$use_location_token"\
+    resolution "$resolution"\
+    frame_num "$frame_num"
 

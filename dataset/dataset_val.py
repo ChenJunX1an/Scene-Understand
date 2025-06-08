@@ -24,7 +24,7 @@ class ValDataset(BaseDataset):
         self.feat_dim = config.model.input_dim
         self.img_feat_dim = config.model.img_input_dim
         self.max_obj_num = config.model.max_obj_num
-
+        self.step = 64//config.frame_num
         feat_file, img_feat_file, attribute_file, anno_file = ann_list[:4]
         self.attributes = torch.load(attribute_file, map_location='cpu') if attribute_file is not None else None
         self.anno = json.load(open(anno_file, 'r'))
@@ -83,7 +83,8 @@ class ValDataset(BaseDataset):
         num_images = len(sorted_image_paths)
         # print("dataset_train_images:",num_images)
         if num_images > 0:
-            step = 8 if num_images % 8 == 0 else 1
+            #step = 8 if num_images % 8 == 0 else 1
+            step = self.step
             sampled_image_paths = sorted_image_paths[::step]
         else:
             sampled_image_paths = []

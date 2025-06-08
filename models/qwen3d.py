@@ -11,8 +11,8 @@ from torch.nn import CrossEntropyLoss
 import sys
 
 # 添加库的绝对路径到 sys.path
-package_path = '/home/u2120220610/anaconda3/envs/chat-scene/lib/python3.9/site-packages'
-sys.path.append(package_path)
+# package_path = '/home/u2120220610/anaconda3/envs/chat-scene/lib/python3.9/site-packages'
+# sys.path.append(package_path)
 from transformers.models.qwen2_5_vl.modeling_qwen2_5_vl import Qwen2_5_VLForConditionalGeneration,Qwen2_5_VLPreTrainedModel, Qwen2_5_VLCausalLMOutputWithPast, Qwen2_5_VLConfig, Qwen2_5_VisionTransformerPretrainedModel, add_start_docstrings_to_model_forward, replace_return_docstrings, QWEN2_5_VL_INPUTS_DOCSTRING, _CONFIG_FOR_DOC
 #from transformers import Qwen2_5_VLPreTrainedModel, GenerationMixin, Qwen2_5_VLConfig, Qwen2_5_VLCausalLMOutputWithPast,Qwen2_5_VisionTransformerPretrainedModel, add_start_docstrings_to_model_forward, replace_return_docstrings, QWEN2_5_VL_INPUTS_DOCSTRING, _CONFIG_FOR_DOC
 
